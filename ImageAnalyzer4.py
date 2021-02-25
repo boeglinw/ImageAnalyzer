@@ -270,6 +270,8 @@ class IAFrame(QtWidgets.QMainWindow):
         self.up_error_bar = False
         self.asym_error_bar = False
         self.combine_files = False
+        self.show_points = False
+        self.show_distance = False
         
         self.button_release = False
         self.dlx = 0.02 #fractional offsets
@@ -346,6 +348,11 @@ class IAFrame(QtWidgets.QMainWindow):
                  ("lower error bar", "Pick Lower Error Bar" , "X", self.onLowErrorBar, False),
                  ("upper error bar", "Pick Upper Error Bar", "X", self.onUpErrorBar, False)
                  ), 
+#                         
+                 ("&Display Options","checkable",
+                 ("show points", "Display picked point coordinates" , None, self.onShowPoints, False),
+                 ("show distance", "Display measured distance" , None, self.onShowDistance, False),
+                 ),                  
 #                 
                  ("&Settings","normal",
                  ("Marker Color", "Select marker color" , self.onSelectColor),                  
@@ -699,6 +706,9 @@ class IAFrame(QtWidgets.QMainWindow):
         self.log10y = self.sender().isChecked()
         print("log10y = ", self.log10y)
 
+
+
+
     def onCombineFiles(self, event):
         sender = self.sender()
         self.combine_files = not self.combine_files
@@ -775,6 +785,15 @@ class IAFrame(QtWidgets.QMainWindow):
         print("up_error_bar = ", self.up_error_bar)
         self.asym_error_bar = True
         self.npoints = 0     
+
+    def onShowPoints(self, event):
+        self.show_points = self.sender().isChecked()
+        print("show_points = ", self.show_points)
+        
+    def onShowDistance(self, event):
+        self.show_distance = self.sender().isChecked()
+        print("show_distance = ", self.show_distance)
+
 
     def onSelectColor(self, event):
         sender = self.sender()
@@ -1064,6 +1083,22 @@ class IAFrame(QtWidgets.QMainWindow):
     def process_positions(self):
         print("Process : ", self.npoints)
         self.data_source.append(self.filename)
+        # store current location
+        p = self.end_pos
+        # apply calibration             
+        xwp = p[0]*self.convx_av + self.xw_off_av
+        ywp = p[1]*self.convy_av + self.yw_off_av
+        print(f' x = {xwp:.3e}\n y = {ywp:.3e}')
+        if self.show_points:
+            # show points if selected
+            # create message
+            msg = QtWidgets.QMessageBox(self)
+            msg.setText(f' x = {xwp:.3e}\n y = {ywp:.3e}')
+            msg.setWindowTitle("Position in World Coordinates")
+            msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
+            msg.exec()
+        # finished
+        
         if self.center_values:
                 self.points.append(self.end_pos )
                 
@@ -1499,6 +1534,15 @@ class IAFrame(QtWidgets.QMainWindow):
         # store last image
         self.background = self.canvas.copy_from_bbox(self.axes.bbox)
         self.button_release = False
+        if self.show_distance:
+            # create a message box
+            print(f'{s_string}')
+            msg = QtWidgets.QMessageBox(self)
+            msg.setText(s_string)
+            msg.setWindowTitle("Distance")
+            msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
+            msg.exec()
+        # finished
         
 
             
@@ -1521,7 +1565,7 @@ class IAFrame(QtWidgets.QMainWindow):
         leader, text = self.get_marker()
         text.set_text(text_string)
         text.set_position( (tpx, tpy) )
-        print("Marker:", mx, my, lpx, lpy, tpx, tpy)
+        # print("Marker:", mx, my, lpx, lpy, tpx, tpy)
         leader.set_data( [mx, lpx], [my, lpy])
         self.leaders.append(leader)
         self.texts.append(text)
